@@ -17,10 +17,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained();
             $table->foreignId('customer_id')->nullable()->constrained();
-            $table->foreignId('barang_id')->nullable()->constrained();
-            $table->integer('quantity_adjusted');
-            $table->text('reason');
+            $table->string('barang_keluar_number')->unique();
+            $table->string('barang_keluar_name')->nullable();
             $table->date('date_sold');
+            $table->bigInteger('discount')->nullable();
+            $table->bigInteger('total');
+            $table->bigInteger('profit')->nullable();
+            $table->string('payment_method');
+            $table->string('status')->nullable();
+            $table->boolean('is_returned');
             $table->timestamps();
         });
 

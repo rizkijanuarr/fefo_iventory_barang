@@ -18,11 +18,11 @@ return new class extends Migration
             $table->foreignId('category_id')->nullable()->constrained();
             $table->string('image')->nullable();
             $table->string('name');
-            $table->string('sku')->unique();
+            $table->string('barcode')->unique();
             $table->text('description');
             $table->integer('stock_quantity');
-            $table->integer('price');
-            $table->integer('cost_price');
+            $table->bigInteger('price');
+            $table->bigInteger('cost_price');
             $table->date('expiration_date');
             $table->timestamps();
         });

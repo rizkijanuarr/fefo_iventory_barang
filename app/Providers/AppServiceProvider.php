@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\BarangKeluarDetail;
+use App\Observers\BarangKeluarObserver;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
