@@ -4,23 +4,20 @@ created:
     - database/factories/CustomerFactory.php
     - database/factories/BarangFactory.php
     - database/factories/BarangMasukFactory.php
-    - database/factories/BarangMasukDetailFactory.php
     - database/factories/BarangKeluarFactory.php
     - database/factories/BarangKeluarDetailFactory.php
-    - database/migrations/2024_10_05_074953_create_categories_table.php
-    - database/migrations/2024_10_05_074954_create_suppliers_table.php
-    - database/migrations/2024_10_05_074955_create_customers_table.php
-    - database/migrations/2024_10_05_074956_create_barangs_table.php
-    - database/migrations/2024_10_05_074957_create_barang_masuks_table.php
-    - database/migrations/2024_10_05_074958_create_barang_masuk_details_table.php
-    - database/migrations/2024_10_05_074959_create_barang_keluars_table.php
-    - database/migrations/2024_10_05_075000_create_barang_keluar_details_table.php
+    - database/migrations/2024_10_06_130246_create_categories_table.php
+    - database/migrations/2024_10_06_130247_create_suppliers_table.php
+    - database/migrations/2024_10_06_130248_create_customers_table.php
+    - database/migrations/2024_10_06_130249_create_barangs_table.php
+    - database/migrations/2024_10_06_130250_create_barang_masuks_table.php
+    - database/migrations/2024_10_06_130251_create_barang_keluars_table.php
+    - database/migrations/2024_10_06_130252_create_barang_keluar_details_table.php
     - app/Models/Category.php
     - app/Models/Supplier.php
     - app/Models/Customer.php
     - app/Models/Barang.php
     - app/Models/BarangMasuk.php
-    - app/Models/BarangMasukDetail.php
     - app/Models/BarangKeluar.php
     - app/Models/BarangKeluarDetail.php
 models:
@@ -29,7 +26,6 @@ models:
     Supplier: { name: string, email: 'string unique', phone_number: 'string nullable', address: 'string nullable', relationships: { hasMany: BarangMasuk } }
     Customer: { name: string, email: 'string unique', phone_number: 'string nullable', address: 'text nullable', relationships: { hasMany: BarangKeluar } }
     Barang: { category_id: 'foreign nullable', image: 'string nullable', name: string, barcode: 'string unique', description: text, stock_quantity: integer, price: bigInteger, cost_price: bigInteger, expiration_date: date, relationships: { hasMany: 'BarangMasuk, BarangKeluar' } }
-    BarangMasuk: { user_id: 'foreign nullable', supplier_id: 'foreign nullable', barang_masuk_number: 'string unique', barang_masuk_name: 'string nullable', status: 'string nullable', total: bigInteger, payment_method: string, expiration_date: date, date_received: date, relationships: { hasMany: BarangMasukDetail } }
-    BarangMasukDetail: { barang_masuk_id: 'foreign nullable', barang_id: 'foreign nullable', quantity: integer, price: bigInteger, subtotal: bigInteger }
+    BarangMasuk: { user_id: 'foreign nullable', barang_id: 'foreign nullable', supplier_id: 'foreign nullable', quantity: integer, reason: 'string nullable', expiration_date: date, date_received: date }
     BarangKeluar: { user_id: 'foreign nullable', customer_id: 'foreign nullable', barang_keluar_number: 'string unique', barang_keluar_name: 'string nullable', date_sold: date, discount: 'bigInteger nullable', total: bigInteger, profit: 'bigInteger nullable', payment_method: string, status: 'string nullable', is_returned: boolean, relationships: { hasMany: BarangKeluarDetail } }
     BarangKeluarDetail: { barang_keluar_id: 'foreign nullable', barang_id: 'foreign nullable', quantity: integer, price: bigInteger, subtotal: bigInteger }

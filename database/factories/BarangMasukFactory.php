@@ -44,7 +44,7 @@ class BarangMasukFactory extends Factory
             });
 
             // Insert BarangMasukDetails
-            \App\Models\BarangMasukDetail::insert($barangMasukDetails->toArray());
+            // \App\Models\BarangMasukDetail::insert($barangMasukDetails->toArray());
 
             // Menghitung total tanpa diskon atau profit
             $total = $barangMasukDetails->sum('subtotal');

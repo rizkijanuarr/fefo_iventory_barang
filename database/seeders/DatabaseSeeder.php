@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
         ]);
 
-        \App\Models\Supplier::factory(50)->create();
-        \App\Models\Customer::factory(50)->create();
+        \App\Models\Supplier::factory(10)->create();
+        \App\Models\Customer::factory(10)->create();
         // \App\Models\Barang::factory(50)->create();
         // \App\Models\BarangMasuk::factory(50)->create();
         // \App\Models\BarangKeluar::factory(50)->create();

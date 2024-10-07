@@ -16,12 +16,10 @@ return new class extends Migration
         Schema::create('barang_masuks', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained();
+            $table->foreignId('barang_id')->nullable()->constrained();
             $table->foreignId('supplier_id')->nullable()->constrained();
-            $table->string('barang_masuk_number')->unique();
-            $table->string('barang_masuk_name')->nullable();
-            $table->string('status')->nullable();
-            $table->bigInteger('total');
-            $table->string('payment_method');
+            $table->integer('quantity');
+            $table->string('reason')->nullable();
             $table->date('expiration_date');
             $table->date('date_received');
             $table->timestamps();
