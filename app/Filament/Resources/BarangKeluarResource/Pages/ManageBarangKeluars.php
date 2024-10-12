@@ -4,16 +4,16 @@ namespace App\Filament\Resources\BarangKeluarResource\Pages;
 
 use App\Filament\Resources\BarangKeluarResource;
 use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ManageRecords;
 
-class EditBarangKeluar extends EditRecord
+class ManageBarangKeluars extends ManageRecords
 {
     protected static string $resource = BarangKeluarResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\CreateAction::make(),
         ];
     }
 }

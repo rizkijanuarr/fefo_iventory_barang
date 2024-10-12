@@ -21,11 +21,6 @@ class Barang extends Model
         return $this->hasMany(BarangKeluar::class);
     }
 
-    public function barangKeluarDetails(): HasMany
-    {
-        return $this->hasMany(BarangKeluarDetail::class);
-    }
-
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

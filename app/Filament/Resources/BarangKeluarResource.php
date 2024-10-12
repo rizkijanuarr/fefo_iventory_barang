@@ -9,11 +9,13 @@ use Filament\Tables\Table;
 use App\Models\BarangKeluar;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Resources\Resource;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\BarangKeluarResource\Pages;
 use App\Filament\Resources\BarangKeluarResource\RelationManagers;
-
+use Filament\Tables\Filters\Filter;
+use Carbon\Carbon;
 
 class BarangKeluarResource extends Resource
 {
@@ -25,111 +27,100 @@ class BarangKeluarResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Informasi Barang Keluar')->schema([
-
-                    // Nomor transaksi Barang Keluar (Auto Generate dan ReadOnly)
-                    Forms\Components\TextInput::make('barang_keluar_number')
-                        ->label('Nomor Transaksi')
-                        ->default(generateBarangKeluarNumber(\App\Models\BarangKeluar::class))
-                        ->readOnly()
-                        ->required(),
-
-                    // Group untuk field customer, barang
-                    Forms\Components\Group::make([
-                        // Select untuk memilih Customer
+                Forms\Components\Grid::make(4)
+                    ->schema([
                         Forms\Components\Select::make('customer_id')
-                            ->label('Pilih Customer')
-                            ->preload()
                             ->relationship('customer', 'name')
-                            ->required(),
-
-                    ])->columns(3)->columnSpanFull(),
-
-                    // Group untuk field quantity, date_sold, payment_method, dan status
-                    Forms\Components\Group::make([
-                        Forms\Components\DatePicker::make('date_sold')
+                            ->searchable()
+                            ->preload()
                             ->required()
-                            ->label('Tanggal Barang Keluar'),
-                        Forms\Components\Select::make('payment_method')
-                            ->label('Metode Pembayaran')
-                            ->enum(\App\Enums\PaymentMethod::class)
-                            ->options(\App\Enums\PaymentMethod::class)
-                            ->default(\App\Enums\PaymentMethod::CASH)
-                            ->required(),
-                        Forms\Components\Select::make('status')
-                            ->label('Status Transaksi')
+                            ->label('Pilih Customer')
+                            ->placeholder('Pilih Customer'),
+
+                        Forms\Components\Select::make('barang_id')
+                            ->relationship('barang', 'name')
+                            ->searchable()
+                            ->preload()
                             ->required()
-                            ->enum(\App\Enums\Status::class)
-                            ->options(\App\Enums\Status::class)
-                            ->default(\App\Enums\Status::PENDING),
-                    ])->columns(4)->columnSpanFull(),
+                            ->label('Pilih Barang')
+                            ->placeholder('Pilih Barang')
+                            ->live(500)
+                            ->afterStateUpdated(function ($state, callable $get, callable $set) {
 
-                    // Toggle untuk barang dikembalikan
-                    Forms\Components\Toggle::make('is_returned')
-                        ->label('Apakah Barang Dikembalikan?')
-                        ->onColor('success')
-                        ->offColor('danger'),
+                                $barang = \App\Models\Barang::find($state);
 
-                    // Total (ReadOnly, auto calculate)
-                    Forms\Components\TextInput::make('total')
-                        ->label('Total')
-                        // ->hiddenOn('create')
-                        ->readOnly()
-                        ->default(0)
-                        ->numeric(),
+                                $set('stock_quantity', $barang ? $barang->stock_quantity : 0);
+                            }),
 
-                    // Profit (ReadOnly, auto calculate)
-                    Forms\Components\TextInput::make('profit')
-                        ->label('Profit')
-                        ->hiddenOn('create')
-                        ->numeric()
-                        ->readOnly(),
-                ])
+                        Forms\Components\TextInput::make('quantity')
+                            ->required()
+                            ->numeric()
+                            ->live(500)
+                            ->label('Qty')
+                            ->placeholder('Qty')
+                            ->afterStateUpdated(function ($state, callable $get, callable $set) {
+
+                                $currentStock = $get('stock_quantity');
+
+
+                                if ($state !== '') {
+                                    $set('stock_quantity', $currentStock + $state);
+                                } else {
+
+                                    $barang = \App\Models\Barang::find($get('barang_id'));
+                                    $set('stock_quantity', $barang ? $barang->stock_quantity : 0);
+                                }
+                            }),
+
+                        Forms\Components\TextInput::make('stock_quantity')
+                            ->label('Qty')
+                            ->required()
+                            ->live(500)
+                            ->numeric()
+                            ->disabled()
+                            ->placeholder('Stock Quantity'),
+                    ]),
+                Forms\Components\TextInput::make('reason')
+                    ->maxLength(255)
+                    ->default('Restock.')
+                    ->required()
+                    ->label('Catatan')
+                    ->placeholder('Write a reason for the stock adjustment'),
+                Forms\Components\DatePicker::make('date_sold')
+                    ->required(),
+                Forms\Components\Toggle::make('is_returned')
+                    ->label('Apakah dikembalikan?')
+                    ->required(),
             ]);
     }
-
-
 
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\TextColumn::make('barang_keluar_number')
-                    ->label('Kode')
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('barang_keluar_name')
-                    ->label('Nama')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('customer.name')
+                Tables\Columns\TextColumn::make('barang.barcode')
+                    ->label('Barcode')
+                    ->formatStateUsing(function ($state) {
+                        return view('components.barcode', ['barcode' => $state]);
+                    }),
+                Tables\Columns\ImageColumn::make('barang.image')->circular()->label('Gambar'),
+                Tables\Columns\TextColumn::make('barang.name')
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('discount')
-                    ->label('Disc')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('total')
+                // Tables\Columns\TextColumn::make('customer.name')
+                //     ->numeric()
+                //     ->sortable(),
+                Tables\Columns\TextColumn::make('quantity')
+                    ->label('Qty')
                     ->numeric()
                     ->sortable()
-                    ->summarize(
-                        Tables\Columns\Summarizers\Sum::make('total')
-                            ->money('IDR'),
-                    ),
-                Tables\Columns\TextColumn::make('profit')
-                    ->numeric()
-                    ->summarize(
-                        Tables\Columns\Summarizers\Sum::make('profit')
-                            ->money('IDR'),
-                    )
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('payment_method')
-                    ->badge()
+                    ->suffix(' Quantity')
                     ->color('gray'),
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn($state) => $state->getColor()),
+                Tables\Columns\TextColumn::make('date_sold')
+                    ->date()
+                    ->sortable(),
                 Tables\Columns\IconColumn::make('is_returned')
+                    ->label('Is Return?')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -141,102 +132,126 @@ class BarangKeluarResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
-                    ->options(\App\Enums\Status::class),
-                Tables\Filters\SelectFilter::make('payment_method')
-                    ->multiple()
-                    ->options(\App\Enums\PaymentMethod::class),
-
-                Tables\Filters\Filter::make('created_at')
+                Filter::make('created_at')
                     ->form([
-                        Forms\Components\DatePicker::make('created_from')
-                            ->maxDate(fn(Forms\Get $get) => $get('end_date') ?: now())
-                            ->native(false),
-                        Forms\Components\DatePicker::make('created_until')
-                            ->native(false)
-                            ->maxDate(now()),
+                        Forms\Components\DatePicker::make('from')
+                            ->label('Dari Tanggal')
+                            ->placeholder('Pilih Tanggal Awal'),
+                        Forms\Components\DatePicker::make('until')
+                            ->label('Sampai Tanggal')
+                            ->placeholder('Pilih Tanggal Akhir'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
-                                $data['created_from'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                $data['from'],
+                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', Carbon::parse($date))
                             )
                             ->when(
-                                $data['created_until'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                $data['until'],
+                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', Carbon::parse($date))
                             );
-                    }),
+                    })
+                    ->label('Filter Tanggal Barang Masuk'),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->icon('heroicon-o-eye')
+                    ->label(false)
+                    ->button()
+                    ->color('primary'),
+                Tables\Actions\EditAction::make()
+                    ->icon('heroicon-o-pencil')
+                    ->label(false)
+                    ->button()
+                    ->color('success'),
+                Tables\Actions\DeleteAction::make()
+                    ->icon('heroicon-o-trash')
+                    ->label(false)
+                    ->button()
+                    ->color('danger')
+                    ->before(function (BarangKeluar $barangKeluars) {
+                        // $barangMasuks->tanggapans()->delete();
+                        $barangKeluars->delete();
+                    }),
+                // PRINT PER RECORD
                 Tables\Actions\Action::make('print')
+                    ->button()
+                    ->label(false)
                     ->button()
                     ->color('gray')
                     ->icon('heroicon-o-printer')
-                    ->action(function (\App\Models\BarangKeluar $record) {
-                        $pdf = Pdf::loadView('pdf.print-barang-keluar', [
-                            'barangKeluar' => $record,
+                    ->action(function (BarangKeluar $record) {
+
+                        $imagePath = public_path('storage/' . $record->barang->image);
+
+
+                        if (!file_exists($imagePath)) {
+                            Log::error("Image not found at path: " . $imagePath);
+                            return response()->json(['error' => 'Image not found'], 404);
+                        }
+
+                        $imageData = file_get_contents($imagePath);
+                        $imageBase64 = base64_encode($imageData);
+
+                        // Load PDF view and pass data
+                        $pdf = Pdf::loadView('pdf.barang-keluar.record-barang-keluar', [
+                            'order' => $record,
+                            'imageBase64' => $imageBase64,
+                        ]);
+
+                        // Return PDF as a downloadable file
+                        return response()->streamDownload(function () use ($pdf) {
+                            echo $pdf->stream();
+                        }, 'receipt-barang-keluar-' . $record->id . '.pdf');
+                    }),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ])
+            ->headerActions([
+                // Tombol untuk ekspor ke Excel
+                Tables\Actions\ExportAction::make()
+                    ->label('Export Excel')
+                    ->fileDisk('public')
+                    ->color('success')
+                    ->icon('heroicon-o-document-text')
+                    ->exporter(\App\Filament\Exports\BarangKeluarExporter::class),
+
+                // Tombol untuk ekspor ke CSV
+                Tables\Actions\ExportAction::make('exportCsv')
+                    ->label('Export CSV')
+                    ->fileDisk('public')
+                    ->color('warning')
+                    ->icon('heroicon-o-document')
+                    ->exporter(\App\Filament\Exports\BarangKeluarExporter::class),
+
+                // Tombol untuk ekspor ke PDF
+                Tables\Actions\Action::make('print')
+                    ->label('Export PDF')
+                    ->button()
+                    ->icon('heroicon-o-document-text')
+                    ->color('danger')
+                    ->action(function () {
+                        $barangKeluars = BarangKeluar::with('barang')->paginate(10);
+
+                        $pdf = Pdf::loadView('pdf.barang-keluar.record-barang-keluar-paginate', [
+                            'barangKeluars' => $barangKeluars,
                         ]);
 
                         return response()->streamDownload(function () use ($pdf) {
                             echo $pdf->stream();
-                        }, 'receipt-' . $record->barang_keluar_number . '.pdf');
+                        }, 'barang-keluar-' . now()->format('Y-m-d_H-i-s') . '.pdf');
                     }),
-
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make()
-                        ->color('gray'),
-                    Tables\Actions\Action::make('edit-transaction')
-                        ->visible(fn(\App\Models\BarangKeluar $record) => $record->status === \App\Enums\Status::PENDING)
-                        ->label('Edit Transaction')
-                        ->icon('heroicon-o-pencil')
-                        ->url(fn($record) => "/barang-keluars/{$record->barang_keluar_number}"),
-                    Tables\Actions\Action::make('mark-as-complete')
-                        ->visible(fn(\App\Models\BarangKeluar $record) => $record->status === \App\Enums\Status::PENDING)
-                        ->requiresConfirmation()
-                        ->icon('heroicon-o-check-circle')
-                        ->color('success')
-                        ->action(fn(\App\Models\BarangKeluar $record) => $record->markAsComplete())
-                        ->label('Mark as Complete'),
-                    Tables\Actions\Action::make('divider')->label('')->disabled(),
-                    Tables\Actions\DeleteAction::make()
-                        ->before(function (\App\Models\BarangKeluar $barangKeluar) {
-                            foreach ($barangKeluar->barangKeluarDetails as $detail) {
-                                $barang = \App\Models\Barang::find($detail->barang_id);
-                                if ($barang) {
-                                    $barang->stock_quantity += $detail->quantity;
-                                    $barang->save();
-                                }
-                            }
-                            $barangKeluar->barangKeluarDetails()->delete();
-                        }),
-                ])
-                    ->color('gray'),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->before(function (\Illuminate\Support\Collection $records) {
-                            $records->each(fn(\App\Models\BarangKeluar $barangKeluar) => $barangKeluar->barangKeluarDetails()->delete());
-                        }),
-                ]),
             ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBarangKeluars::route('/'),
-            'create' => Pages\CreateBarangKeluar::route('/create'),
-            'edit' => Pages\EditBarangKeluar::route('/{record}/edit'),
-            'create-transaction' => Pages\CreateTransaction::route('{record}'),
+            'index' => Pages\ManageBarangKeluars::route('/'),
         ];
     }
 }

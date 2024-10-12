@@ -44,22 +44,9 @@ models:
 
   BarangKeluar:
     user_id: foreign nullable
-    customer_id: foreign nullable
-    barang_keluar_number: string unique
-    barang_keluar_name: string nullable
-    date_sold: date
-    discount: bigInteger nullable
-    total: bigInteger
-    profit: bigInteger nullable
-    payment_method: string
-    status: string nullable
-    is_returned: boolean # RETURN
-    relationships:
-      hasMany: BarangKeluarDetail
-
-  BarangKeluarDetail:
-    barang_keluar_id: foreign nullable
     barang_id: foreign nullable
+    customer_id: foreign nullable
     quantity: integer
-    price: bigInteger
-    subtotal: bigInteger
+    reason: string nullable
+    date_sold: date
+    is_returned: boolean # RETURN

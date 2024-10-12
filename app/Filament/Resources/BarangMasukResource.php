@@ -7,6 +7,7 @@ use Filament\Tables;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use App\Models\BarangMasuk;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Resources\Resource;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\BarangMasukResource\Pages;
 use App\Filament\Resources\BarangMasukResource\RelationManagers;
+use Filament\Tables\Filters\Filter;
+use Carbon\Carbon;
 
 class BarangMasukResource extends Resource
 {
@@ -25,7 +28,8 @@ class BarangMasukResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Grid::make(4) // Membuat grid dengan 4 kolom
+
+                Forms\Components\Grid::make(4)
                     ->schema([
                         Forms\Components\Select::make('supplier_id')
                             ->relationship('supplier', 'name')
@@ -40,23 +44,15 @@ class BarangMasukResource extends Resource
                             ->searchable()
                             ->preload()
                             ->required()
-                            ->live(500)
                             ->label('Pilih Barang')
                             ->placeholder('Pilih Barang')
-                            ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                                // Ambil barang berdasarkan barang_id yang dipilih
-                                $barang = \App\Models\Barang::find($state);
-                                // Set stock_quantity berdasarkan barang yang dipilih
-                                $set('stock_quantity', $barang ? $barang->stock_quantity : 0); // Set ke 0 jika tidak ada barang
-                            }),
-
-                        Forms\Components\TextInput::make('stock_quantity')
-                            ->label('Stock Quantity')
-                            ->required()
                             ->live(500)
-                            ->numeric()
-                            ->disabled() // Menandai sebagai disabled
-                            ->placeholder('Stock Quantity'),
+                            ->afterStateUpdated(function ($state, callable $get, callable $set) {
+
+                                $barang = \App\Models\Barang::find($state);
+
+                                $set('stock_quantity', $barang ? $barang->stock_quantity : 0);
+                            }),
 
                         Forms\Components\TextInput::make('quantity')
                             ->required()
@@ -65,18 +61,27 @@ class BarangMasukResource extends Resource
                             ->label('Qty')
                             ->placeholder('Qty')
                             ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                                // Ambil nilai stock_quantity saat ini
+
                                 $currentStock = $get('stock_quantity');
 
-                                // Jika Qty diisi, tambahkan ke stock_quantity
+
                                 if ($state !== '') {
                                     $set('stock_quantity', $currentStock + $state);
                                 } else {
-                                    // Jika Qty dikosongkan, ambil nilai stock_quantity dari barang yang dipilih
+
                                     $barang = \App\Models\Barang::find($get('barang_id'));
                                     $set('stock_quantity', $barang ? $barang->stock_quantity : 0);
                                 }
                             }),
+
+                        Forms\Components\TextInput::make('stock_quantity')
+                            ->label('Qty')
+                            ->required()
+                            ->live(500)
+                            ->numeric()
+                            ->disabled()
+                            ->placeholder('Stock Quantity'),
+
                     ]),
 
                 Forms\Components\Group::make(
@@ -102,62 +107,28 @@ class BarangMasukResource extends Resource
                     ]
                 )->columns(2)->columnSpanFull(),
 
-
-
-
             ]);
-    }
-
-    public static function create(array $data): Model
-    {
-        Log::info('Creating BarangMasuk with data:', $data);
-
-        $barang = \App\Models\Barang::find($data['barang_id']);
-        if (!$barang) {
-            throw new \Exception('Barang not found for ID: ' . $data['barang_id']);
-        }
-
-        // Logika untuk menambah stok barang
-        $barang->stock_quantity += $data['quantity'];
-        $barang->save();
-
-        // Simpan data BarangMasuk
-        $barangMasuk = parent::create($data);
-
-        return $barangMasuk;
-    }
-
-
-    public static function update(array $data, Model $record): Model
-    {
-        // Simpan data BarangMasuk menggunakan parent::update
-        $barangMasuk = parent::update($data, $record);
-
-        // Logika untuk menambah stok barang (misalnya, jika quantity berubah)
-        $barang = \App\Models\Barang::find($data['barang_id']);
-        if ($barang) {
-            // Anda mungkin ingin memeriksa apakah quantity berubah sebelum menambah
-            $quantityDifference = $data['quantity'] - $record->quantity; // Perbedaan quantity
-            $barang->stock_quantity += $quantityDifference;
-            $barang->save();
-        }
-
-        return $barangMasuk;
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('supplier.name')
-                    ->label('Supplier')
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('barang.barcode')
+                    ->label('Barcode')
+                    ->formatStateUsing(function ($state) {
+                        return view('components.barcode', ['barcode' => $state]);
+                    }),
+                Tables\Columns\ImageColumn::make('barang.image')->circular()->label('Gambar'),
                 Tables\Columns\TextColumn::make('barang.name')
                     ->label('Barang')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('quantity')
                     ->label('Qty')
-                    ->sortable(),
+                    ->numeric()
+                    ->sortable()
+                    ->suffix(' Quantity')
+                    ->color('gray'),
                 Tables\Columns\TextColumn::make('expiration_date')
                     ->label('Kadaluarsa')
                     ->date()
@@ -176,16 +147,116 @@ class BarangMasukResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Filter::make('created_at')
+                    ->form([
+                        Forms\Components\DatePicker::make('from')
+                            ->label('Dari Tanggal')
+                            ->placeholder('Pilih Tanggal Awal'),
+                        Forms\Components\DatePicker::make('until')
+                            ->label('Sampai Tanggal')
+                            ->placeholder('Pilih Tanggal Akhir'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['from'],
+                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', Carbon::parse($date))
+                            )
+                            ->when(
+                                $data['until'],
+                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', Carbon::parse($date))
+                            );
+                    })
+                    ->label('Filter Tanggal Barang Masuk'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->icon('heroicon-o-eye')
+                    ->label(false)
+                    ->button()
+                    ->color('primary'),
+                Tables\Actions\EditAction::make()
+                    ->icon('heroicon-o-pencil')
+                    ->label(false)
+                    ->button()
+                    ->color('success'),
+                Tables\Actions\DeleteAction::make()
+                    ->icon('heroicon-o-trash')
+                    ->label(false)
+                    ->button()
+                    ->color('danger')
+                    ->before(function (BarangMasuk $barangMasuks) {
+                        $barangMasuks->delete();
+                    }),
+                // PRINT PER RECORD
+                Tables\Actions\Action::make('print')
+                    ->button()
+                    ->color('gray')
+                    ->label(false)
+                    ->button()
+                    ->icon('heroicon-o-printer')
+                    ->action(function (BarangMasuk $record) {
+                        $imagePath = public_path('storage/' . $record->barang->image);
+
+                        if (!file_exists($imagePath)) {
+                            Log::error("Image not found at path: " . $imagePath);
+                            return response()->json(['error' => 'Image not found'], 404);
+                        }
+
+                        $imageData = file_get_contents($imagePath);
+                        $imageBase64 = base64_encode($imageData);
+
+                        // Load PDF view and pass data
+                        $pdf = Pdf::loadView('pdf.barang-masuk.record-barang-masuk', [
+                            'order' => $record,
+                            'imageBase64' => $imageBase64,
+                        ]);
+
+                        // Return PDF as a downloadable file
+                        return response()->streamDownload(function () use ($pdf) {
+                            echo $pdf->stream();
+                        }, 'receipt-barang-masuk-' . $record->id . '.pdf');
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
+            ])
+            ->headerActions([
+                // Tombol untuk ekspor ke Excel
+                Tables\Actions\ExportAction::make()
+                    ->label('Export Excel')
+                    ->fileDisk('public')
+                    ->color('success')
+                    ->icon('heroicon-o-document-text')
+                    ->exporter(\App\Filament\Exports\BarangMasukExporter::class),
+
+                // Tombol untuk ekspor ke CSV
+                Tables\Actions\ExportAction::make('exportCsv')
+                    ->label('Export CSV')
+                    ->fileDisk('public')
+                    ->color('warning')
+                    ->icon('heroicon-o-document')
+                    ->exporter(\App\Filament\Exports\BarangMasukExporter::class),
+
+                // Tombol untuk ekspor ke PDF
+                Tables\Actions\Action::make('print')
+                    ->label('Export PDF')
+                    ->button()
+                    ->icon('heroicon-o-document-text')
+                    ->color('danger')
+                    ->action(function () {
+                        $barangMasuks = BarangMasuk::with('barang')->paginate(10); // Set pagination ke 10 item per halaman
+
+                        $pdf = Pdf::loadView('pdf.barang-masuk.record-barang-masuk-paginate', [
+                            'barangMasuks' => $barangMasuks,
+                        ]);
+
+                        return response()->streamDownload(function () use ($pdf) {
+                            echo $pdf->stream();
+                        }, 'barang-masuk-' . now()->format('Y-m-d_H-i-s') . '.pdf');
+                    }),
             ]);
     }
 

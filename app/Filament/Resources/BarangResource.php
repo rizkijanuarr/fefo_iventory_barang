@@ -22,79 +22,81 @@ class BarangResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Group::make([
-                    Forms\Components\FileUpload::make('image')
-                        ->required()
-                        ->label('Gambar')
-                        ->image()
-                        ->disk('public')
-                        ->maxSize(1024)
-                        ->imageCropAspectRatio('1:1')
-                        ->directory('images/products'),
-                ])->columns(1)->columnSpanFull(),
-                Forms\Components\Group::make(
-                    [
-                        Forms\Components\Select::make('category_id')
-                            ->relationship('category', 'name')
-                            ->label('Pilih Kategori Barang')
-                            ->searchable()
-                            ->preload()
-                            ->required(),
-                        Forms\Components\TextInput::make('name')
-                            ->label('Nama Barang')
-                            ->placeholder('Masukan Nama Barang')
+                Forms\Components\Section::make('Informasi Barang')->schema([
+                    Forms\Components\Group::make([
+                        Forms\Components\FileUpload::make('image')
                             ->required()
-                            ->live(500)
-                            ->maxLength(255)
-                            ->afterStateUpdated(fn(Forms\Set $set, $state) => $set('barcode', 'BR-' . random_int(10000, 99999))),
-                        Forms\Components\TextInput::make('barcode')
-                            ->placeholder('Generated setelah isi Nama Barang')
-                            ->label('Barcode')
-                            ->required()
-                            ->maxLength(255)
-                            ->live(500)
-                            ->suffixAction(function (Forms\Set $set, Forms\Get $get) {
-                                return Forms\Components\Actions\Action::make('generateBarcode')
-                                    ->icon('heroicon-o-arrow-path')
-                                    ->hidden(! $get('name'))
-                                    ->action(fn() => $set('barcode', 'BR-' . random_int(10000, 99999)));
-                            }),
-                    ]
-                )->columns(3)->columnSpanFull(),
+                            ->label('Gambar')
+                            ->image()
+                            ->disk('public')
+                            ->maxSize(1024)
+                            ->imageCropAspectRatio('1:1')
+                            ->directory('images/products'),
+                    ])->columns(1)->columnSpanFull(),
+                    Forms\Components\Group::make(
+                        [
+                            Forms\Components\Select::make('category_id')
+                                ->relationship('category', 'name')
+                                ->label('Pilih Kategori Barang')
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+                            Forms\Components\TextInput::make('name')
+                                ->label('Nama Barang')
+                                ->placeholder('Masukan Nama Barang')
+                                ->required()
+                                ->live(500)
+                                ->maxLength(255)
+                                ->afterStateUpdated(fn(Forms\Set $set, $state) => $set('barcode', 'BR-' . random_int(10000, 99999))),
+                            Forms\Components\TextInput::make('barcode')
+                                ->placeholder('Generated setelah isi Nama Barang')
+                                ->label('Barcode')
+                                ->required()
+                                ->maxLength(255)
+                                ->live(500)
+                                ->suffixAction(function (Forms\Set $set, Forms\Get $get) {
+                                    return Forms\Components\Actions\Action::make('generateBarcode')
+                                        ->icon('heroicon-o-arrow-path')
+                                        ->hidden(! $get('name'))
+                                        ->action(fn() => $set('barcode', 'BR-' . random_int(10000, 99999)));
+                                }),
+                        ]
+                    )->columns(3)->columnSpanFull(),
 
-                Forms\Components\MarkdownEditor::make('description')
-                    ->maxLength(65535)
-                    ->required()
-                    ->default('Deskripsi singkat')
-                    ->label('Deskripsi')
-                    ->placeholder('Masukan Deskripsi')
-                    ->columnSpanFull(),
-                Forms\Components\Group::make([
-                    Forms\Components\TextInput::make('stock_quantity')
+                    Forms\Components\MarkdownEditor::make('description')
+                        ->maxLength(65535)
                         ->required()
-                        ->default('100')
-                        ->label('Stock Barang')
-                        ->placeholder('Stock Barang, ex: 100')
-                        ->numeric(),
-                    Forms\Components\TextInput::make('cost_price')
-                        ->required()
-                        ->default('5000')
-                        ->label('Harga Pokok')
-                        ->placeholder('ex: 5000')
-                        ->numeric()
-                        ->prefix('Rp '),
-                    Forms\Components\TextInput::make('price')
-                        ->required()
-                        ->default('7000')
-                        ->label('Harga Jual')
-                        ->placeholder('ex: 7000') // mengambil 20% dari harga pokok
-                        ->numeric()
-                        ->prefix('Rp ')
-                        ->live(500),
-                    Forms\Components\DatePicker::make('expiration_date')
-                        ->label('Tanggal Kadaluwarsa')
-                        ->required(),
-                ])->columns(4)->columnSpanFull(),
+                        ->default('Deskripsi singkat')
+                        ->label('Deskripsi')
+                        ->placeholder('Masukan Deskripsi')
+                        ->columnSpanFull(),
+                    Forms\Components\Group::make([
+                        Forms\Components\TextInput::make('stock_quantity')
+                            ->required()
+                            ->default('100')
+                            ->label('Stock Barang')
+                            ->placeholder('Stock Barang, ex: 100')
+                            ->numeric(),
+                        Forms\Components\TextInput::make('cost_price')
+                            ->required()
+                            ->default('5000')
+                            ->label('Harga Pokok')
+                            ->placeholder('ex: 5000')
+                            ->numeric()
+                            ->prefix('Rp '),
+                        Forms\Components\TextInput::make('price')
+                            ->required()
+                            ->default('7000')
+                            ->label('Harga Jual')
+                            ->placeholder('ex: 7000') // mengambil 20% dari harga pokok
+                            ->numeric()
+                            ->prefix('Rp ')
+                            ->live(500),
+                        Forms\Components\DatePicker::make('expiration_date')
+                            ->label('Tanggal Kadaluwarsa')
+                            ->required(),
+                    ])->columns(4)->columnSpanFull(),
+                ])
             ]);
     }
 
@@ -103,11 +105,19 @@ class BarangResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
+                Tables\Columns\TextColumn::make('barcode')
+                    ->label('Barcode')
+                    ->formatStateUsing(function ($state) {
+                        return view('components.barcode', ['barcode' => $state]);
+                    }),
                 Tables\Columns\ImageColumn::make('image')->circular()->label('Gambar'),
                 Tables\Columns\TextColumn::make('name')->label('Nama Barang')->searchable(),
                 Tables\Columns\TextColumn::make('category.name')->label('Kategori'),
-                Tables\Columns\TextColumn::make('barcode')->label('Barcode')->searchable(),
-                Tables\Columns\TextColumn::make('stock_quantity')->label('Stock Barang')->numeric()->sortable()
+
+                Tables\Columns\TextColumn::make('stock_quantity')
+                    ->label('Stock Barang')
+                    ->numeric()
+                    ->sortable()
                     ->suffix(' Quantity')
                     ->color('gray'),
                 Tables\Columns\TextColumn::make('cost_price')->label('Harga Pokok')
