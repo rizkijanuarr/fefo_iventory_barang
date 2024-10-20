@@ -19,6 +19,13 @@
             color: #333;
         }
 
+        .super-title {
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: -8px;
+        }
+
         .container {
             max-width: 800px;
             margin: auto;
@@ -102,7 +109,7 @@
 
     <!-- Header dengan logo -->
     <header>
-        <img src="{{ public_path('storage/alfa.png') }}" alt="Company Logo">
+        <h1 class="super-title">SM-MART</h1>
         <h1>Receipt Barang Masuk</h1>
         <p>{{ now()->format('d F Y H:i') }}</p>
     </header>

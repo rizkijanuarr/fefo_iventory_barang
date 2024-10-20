@@ -20,8 +20,9 @@ use Carbon\Carbon;
 class BarangKeluarResource extends Resource
 {
     protected static ?string $model = BarangKeluar::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-s-inbox-stack';
+    protected static ?string $navigationGroup = 'Transactions';
+    use \App\Traits\HasNavigationBadge;
 
     public static function form(Form $form): Form
     {
@@ -46,10 +47,16 @@ class BarangKeluarResource extends Resource
                             ->placeholder('Pilih Barang')
                             ->live(500)
                             ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                                // Ambil barang dari barangMasuk dengan expiration date terdekat
+                                $barangMasukTerdekat = \App\Models\BarangMasuk::where('barang_id', $state)
+                                    ->orderBy('expiration_date', 'asc')
+                                    ->first();
 
-                                $barang = \App\Models\Barang::find($state);
-
-                                $set('stock_quantity', $barang ? $barang->stock_quantity : 0);
+                                if ($barangMasukTerdekat) {
+                                    $set('stock_quantity', $barangMasukTerdekat->quantity);
+                                } else {
+                                    $set('stock_quantity', 0); // Jika tidak ada barang yang masuk
+                                }
                             }),
 
                         Forms\Components\TextInput::make('quantity')
@@ -64,7 +71,7 @@ class BarangKeluarResource extends Resource
 
 
                                 if ($state !== '') {
-                                    $set('stock_quantity', $currentStock + $state);
+                                    $set('stock_quantity', $currentStock - $state);
                                 } else {
 
                                     $barang = \App\Models\Barang::find($get('barang_id'));
@@ -82,14 +89,12 @@ class BarangKeluarResource extends Resource
                     ]),
                 Forms\Components\TextInput::make('reason')
                     ->maxLength(255)
-                    ->default('Restock.')
+                    ->default('Outstock ..')
                     ->required()
                     ->label('Catatan')
                     ->placeholder('Write a reason for the stock adjustment'),
                 Forms\Components\DatePicker::make('date_sold')
-                    ->required(),
-                Forms\Components\Toggle::make('is_returned')
-                    ->label('Apakah dikembalikan?')
+                    ->label('Tanggal Terjual')
                     ->required(),
             ]);
     }
@@ -107,9 +112,6 @@ class BarangKeluarResource extends Resource
                 Tables\Columns\TextColumn::make('barang.name')
                     ->numeric()
                     ->sortable(),
-                // Tables\Columns\TextColumn::make('customer.name')
-                //     ->numeric()
-                //     ->sortable(),
                 Tables\Columns\TextColumn::make('quantity')
                     ->label('Qty')
                     ->numeric()
@@ -117,11 +119,9 @@ class BarangKeluarResource extends Resource
                     ->suffix(' Quantity')
                     ->color('gray'),
                 Tables\Columns\TextColumn::make('date_sold')
+                    ->label('Terjual')
                     ->date()
                     ->sortable(),
-                Tables\Columns\IconColumn::make('is_returned')
-                    ->label('Is Return?')
-                    ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

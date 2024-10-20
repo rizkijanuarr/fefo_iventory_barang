@@ -21,6 +21,16 @@ class BarangMasuk extends Model
                 $barang->stock_quantity += $barangMasuks->quantity;
                 $barang->save();
             }
+
+            // Cek apakah expiration_date adalah hari ini atau telah lewat
+            if ($barangMasuks->expiration_date <= now()->toDateString()) {
+                $barangMasuks->is_returned = true; // Tandai sebagai return jika sudah expired
+            } else {
+                $barangMasuks->is_returned = false; // Jika belum expired, set false
+            }
+
+            // Panggil fungsi untuk mengecek barang expired yang ada
+            self::checkExpiredItems(); // Memanggil fungsi pengecekan expired secara otomatis
         });
 
         static::deleting(function (self $barangMasuks) {
@@ -31,6 +41,29 @@ class BarangMasuk extends Model
                 $barang->save();
             }
         });
+    }
+
+    // Fungsi untuk mengecek barang yang expired tapi belum terjual
+    public static function checkExpiredItems(): void
+    {
+        // Ambil barang yang sudah expired dan belum terjual
+        $expiredBarang = self::where('expiration_date', '<', now())
+            ->where('quantity', '>', 0)
+            ->where('is_returned', false)  // Barang yang belum ditandai sebagai return
+            ->get();
+
+        foreach ($expiredBarang as $barang) {
+            // Tandai barang sebagai return
+            $barang->is_returned = true;
+            $barang->save();
+
+            // Update stok barang di tabel Barang
+            $barangModel = \App\Models\Barang::find($barang->barang_id);
+            if ($barangModel) {
+                $barangModel->stock_quantity -= $barang->quantity;
+                $barangModel->save();
+            }
+        }
     }
 
     public function user(): BelongsTo

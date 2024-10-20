@@ -5,22 +5,26 @@ namespace Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 use App\Models\Customer;
-use Faker\Factory as Faker;
 
 class CustomerFactory extends Factory
 {
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
     protected $model = Customer::class;
 
+    /**
+     * Define the model's default state.
+     */
     public function definition(): array
     {
-        $faker = Faker::create('id_ID');
-        $faker->unique(true); // Reset unique generator
-
         return [
-            'name' => $faker->name(), // Nama orang Indonesia
-            'email' => $faker->unique(true)->safeEmail(),
-            'phone_number' => '+62' . $faker->numerify('##########'), // Nomor telepon Indonesia
-            'address' => $faker->address(), // Alamat Indonesia
+            'name' => $this->faker->name(),
+            'email' => $this->faker->safeEmail(),
+            'phone_number' => $this->faker->phoneNumber(),
+            'address' => $this->faker->text(),
         ];
     }
 }

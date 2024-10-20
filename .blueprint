@@ -5,12 +5,12 @@ created:
     - database/factories/BarangFactory.php
     - database/factories/BarangMasukFactory.php
     - database/factories/BarangKeluarFactory.php
-    - database/migrations/2024_10_12_080738_create_categories_table.php
-    - database/migrations/2024_10_12_080739_create_suppliers_table.php
-    - database/migrations/2024_10_12_080740_create_customers_table.php
-    - database/migrations/2024_10_12_080741_create_barangs_table.php
-    - database/migrations/2024_10_12_080742_create_barang_masuks_table.php
-    - database/migrations/2024_10_12_080743_create_barang_keluars_table.php
+    - database/migrations/2024_10_19_091306_create_categories_table.php
+    - database/migrations/2024_10_19_091307_create_suppliers_table.php
+    - database/migrations/2024_10_19_091308_create_customers_table.php
+    - database/migrations/2024_10_19_091309_create_barangs_table.php
+    - database/migrations/2024_10_19_091310_create_barang_masuks_table.php
+    - database/migrations/2024_10_19_091311_create_barang_keluars_table.php
     - app/Models/Category.php
     - app/Models/Supplier.php
     - app/Models/Customer.php
@@ -23,5 +23,5 @@ models:
     Supplier: { name: string, email: 'string unique', phone_number: 'string nullable', address: 'string nullable', relationships: { hasMany: BarangMasuk } }
     Customer: { name: string, email: 'string unique', phone_number: 'string nullable', address: 'text nullable', relationships: { hasMany: BarangKeluar } }
     Barang: { category_id: 'foreign nullable', image: 'string nullable', name: string, barcode: 'string unique', description: text, stock_quantity: integer, price: bigInteger, cost_price: bigInteger, expiration_date: date, relationships: { hasMany: 'BarangMasuk, BarangKeluar' } }
-    BarangMasuk: { user_id: 'foreign nullable', barang_id: 'foreign nullable', supplier_id: 'foreign nullable', quantity: integer, reason: 'string nullable', expiration_date: date, date_received: date }
-    BarangKeluar: { user_id: 'foreign nullable', barang_id: 'foreign nullable', customer_id: 'foreign nullable', quantity: integer, reason: 'string nullable', date_sold: date, is_returned: boolean }
+    BarangMasuk: { user_id: 'foreign nullable', barang_id: 'foreign nullable', supplier_id: 'foreign nullable', quantity: integer, reason: 'string nullable', expiration_date: date, date_received: date, is_returned: boolean }
+    BarangKeluar: { user_id: 'foreign nullable', barang_id: 'foreign nullable', customer_id: 'foreign nullable', quantity: integer, reason: 'string nullable', date_sold: date }

@@ -15,8 +15,9 @@ use App\Filament\Resources\BarangResource\RelationManagers\BarangMasukRelationMa
 class BarangResource extends Resource
 {
     protected static ?string $model = Barang::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-cube';
+    protected static ?string $navigationGroup = 'Master Data';
+    use \App\Traits\HasNavigationBadge;
 
     public static function form(Form $form): Form
     {
@@ -147,7 +148,26 @@ class BarangResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->icon('heroicon-o-eye')
+                    ->label(false)
+                    ->button()
+                    ->color('primary'),
+                Tables\Actions\EditAction::make()
+                    ->icon('heroicon-o-pencil')
+                    ->label(false)
+                    ->button()
+                    ->color('success'),
+                Tables\Actions\DeleteAction::make()
+                    ->icon('heroicon-o-trash')
+                    ->label(false)
+                    ->button()
+                    ->color('danger')
+                    ->before(function (Barang $barang) {
+                        $barang->barangMasuks()->delete();
+                        $barang->barangKeluars()->delete();
+                        $barang->delete();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

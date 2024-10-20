@@ -16,8 +16,9 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class SupplierResource extends Resource
 {
     protected static ?string $model = Supplier::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+    protected static ?string $navigationGroup = 'Master Data';
+    use \App\Traits\HasNavigationBadge;
 
     public static function form(Form $form): Form
     {
@@ -81,8 +82,25 @@ class SupplierResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->icon('heroicon-o-eye')
+                    ->label(false)
+                    ->button()
+                    ->color('primary'),
+                Tables\Actions\EditAction::make()
+                    ->icon('heroicon-o-pencil')
+                    ->label(false)
+                    ->button()
+                    ->color('success'),
+                Tables\Actions\DeleteAction::make()
+                    ->icon('heroicon-o-trash')
+                    ->label(false)
+                    ->button()
+                    ->color('danger')
+                    ->before(function (Supplier $suppliers) {
+                        $suppliers->barangMasuks()->delete();
+                        $suppliers->delete();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

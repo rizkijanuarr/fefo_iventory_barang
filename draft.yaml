@@ -29,7 +29,7 @@ models:
     stock_quantity: integer
     price: bigInteger
     cost_price: bigInteger
-    expiration_date: date # FEFO
+    expiration_date: date
     relationships:
       hasMany: BarangMasuk, BarangKeluar
 
@@ -39,8 +39,9 @@ models:
     supplier_id: foreign nullable
     quantity: integer
     reason: string nullable
-    expiration_date: date # FEFO
+    expiration_date: date
     date_received: date
+    is_returned: boolean
 
   BarangKeluar:
     user_id: foreign nullable
@@ -49,4 +50,3 @@ models:
     quantity: integer
     reason: string nullable
     date_sold: date
-    is_returned: boolean # RETURN

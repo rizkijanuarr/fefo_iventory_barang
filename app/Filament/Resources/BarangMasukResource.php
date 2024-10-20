@@ -17,12 +17,15 @@ use App\Filament\Resources\BarangMasukResource\Pages;
 use App\Filament\Resources\BarangMasukResource\RelationManagers;
 use Filament\Tables\Filters\Filter;
 use Carbon\Carbon;
+use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Columns\IconColumn;
 
 class BarangMasukResource extends Resource
 {
     protected static ?string $model = BarangMasuk::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-s-inbox-arrow-down';
+    protected static ?string $navigationGroup = 'Transactions';
+    use \App\Traits\HasNavigationBadge;
 
     public static function form(Form $form): Form
     {
@@ -106,6 +109,10 @@ class BarangMasukResource extends Resource
                             ->required(),
                     ]
                 )->columns(2)->columnSpanFull(),
+                Forms\Components\Toggle::make('is_returned')
+                    ->label('Apakah dikembalikan?')
+                    ->disabled() // Disabled, karena otomatis diatur oleh sistem
+                    ->required(),
 
             ]);
     }
@@ -113,6 +120,7 @@ class BarangMasukResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('barang.barcode')
                     ->label('Barcode')
@@ -133,10 +141,14 @@ class BarangMasukResource extends Resource
                     ->label('Kadaluarsa')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('date_received')
-                    ->label('Barang Masuk')
-                    ->date()
-                    ->sortable(),
+                // Tables\Columns\TextColumn::make('date_received')
+                //     ->label('Barang Masuk')
+                //     ->date()
+                //     ->sortable(),
+                Tables\Columns\IconColumn::make('is_returned')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-badge')
+                    ->falseIcon('heroicon-o-x-mark'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -168,6 +180,12 @@ class BarangMasukResource extends Resource
                             );
                     })
                     ->label('Filter Tanggal Barang Masuk'),
+                Filter::make('is_returned')
+                    ->query(fn(Builder $query): Builder => $query->where('is_returned', true))
+                    ->label('Barang Return'),
+                Filter::make('expired')
+                    ->query(fn(Builder $query): Builder => $query->where('expiration_date', '<', now()))
+                    ->label('Barang Expired'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make()
@@ -241,22 +259,24 @@ class BarangMasukResource extends Resource
                     ->exporter(\App\Filament\Exports\BarangMasukExporter::class),
 
                 // Tombol untuk ekspor ke PDF
-                Tables\Actions\Action::make('print')
+                Tables\Actions\Action::make('printAllRecords')
                     ->label('Export PDF')
                     ->button()
                     ->icon('heroicon-o-document-text')
                     ->color('danger')
                     ->action(function () {
-                        $barangMasuks = BarangMasuk::with('barang')->paginate(10); // Set pagination ke 10 item per halaman
+                        $barangMasuks = BarangMasuk::with('barang')->paginate(10); // Load multiple records
 
+                        // Load PDF view and pass multiple records
                         $pdf = Pdf::loadView('pdf.barang-masuk.record-barang-masuk-paginate', [
-                            'barangMasuks' => $barangMasuks,
+                            'barangMasuks' => $barangMasuks, // Pass all paginated records
                         ]);
 
                         return response()->streamDownload(function () use ($pdf) {
                             echo $pdf->stream();
                         }, 'barang-masuk-' . now()->format('Y-m-d_H-i-s') . '.pdf');
                     }),
+
             ]);
     }
 

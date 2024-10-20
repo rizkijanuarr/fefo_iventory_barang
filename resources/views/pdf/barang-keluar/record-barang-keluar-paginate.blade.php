@@ -68,7 +68,7 @@
 
 <body>
     <div>
-        <h1 class="super-title">Alfamart</h1>
+        <h1 class="super-title">SM-MART</h1>
         <h2 class="title">Receipt Barang Keluar</h2>
         <p class="subtitle">Jl. Perjuangan No.11</p>
 

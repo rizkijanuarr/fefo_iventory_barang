@@ -30,7 +30,6 @@ class BarangKeluarFactory extends Factory
             'quantity' => $this->faker->numberBetween(-10000, 10000),
             'reason' => $this->faker->word(),
             'date_sold' => $this->faker->date(),
-            'is_returned' => $this->faker->boolean(),
         ];
     }
 }

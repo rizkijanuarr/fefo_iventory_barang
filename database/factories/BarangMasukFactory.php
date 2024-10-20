@@ -31,6 +31,7 @@ class BarangMasukFactory extends Factory
             'reason' => $this->faker->word(),
             'expiration_date' => $this->faker->date(),
             'date_received' => $this->faker->date(),
+            'is_returned' => $this->faker->boolean(),
         ];
     }
 }
