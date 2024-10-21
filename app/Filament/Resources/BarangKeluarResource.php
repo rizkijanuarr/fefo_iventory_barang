@@ -229,7 +229,7 @@ class BarangKeluarResource extends Resource
                     ->exporter(\App\Filament\Exports\BarangKeluarExporter::class),
 
                 // Tombol untuk ekspor ke PDF
-                Tables\Actions\Action::make('print')
+                Tables\Actions\Action::make('printAllRecords')
                     ->label('Export PDF')
                     ->button()
                     ->icon('heroicon-o-document-text')
